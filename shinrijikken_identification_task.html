@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <script src="../jspsych.js"></script>
+  <script src="../plugins/jspsych-html-button-response.js"></script>
+  <script src="../plugins/jspsych-html-keyboard-response.js"></script>
+  <script src="../plugins/jspsych-survey-likert.js"></script>
+  <link rel="stylesheet" href="../css/jspsych.css"></link>
+  <style>
+    #jspsych-survey-likert-next{
+      font-size: 20px;
+    }
+  </style>
+</head>
+<body></body>
+<script>
+
+  var timeline = [];
+
+
+// 教示画面
+  var start = {
+    type: 'html-button-response',
+    stimulus:
+    '<p><font size=5>実験を開始します。</font></p>', // htmlのタグは基本的には<p></p>や<font></font>のようにはさんで使います。
+    choices: ['<font size=5>はい</font>'],
+  }
+  timeline.push(start);
+
+
+// 選択肢の設定
+  var counterBalance = 1;
+
+  if (counterBalance == 1) {
+    scale = ["<p></p><font size=6>ば</font>", "<p></p><font size=6>ぱ</font>"];
+    cb_info = ["0=ba, 1=pa"];
+  } else {
+    scale = ["<p></p><font size=6>ぱ</font>", "<p></p><font size=6>ば</font>"];
+    cb_info = ["0=pa, 1=ba"];
+  }
+
+// 音声再生に関する関数
+  function sound_play(){
+      document.getElementById('audio-center').play();
+      buttonSpan = document.getElementById('playLabel');
+      buttonSpan.style.display = "none";
+  }
+
+// 練習試行と本試行の分岐、ブロック数(繰り返し)の設定
+    for (var phase = 0; phase < 2; phase++){ // phase=0は練習試行、phase=1は本試行
+        if (phase == 0) { // 練習試行
+            tmpStr = '練習を始めます。';
+            var rep = 1;
+          } else { // 本試行
+            tmpStr = '練習は以上です。本課題を始めます。';
+            var rep = 4;
+          }
+
+        // 試行前画面　
+        var instruction = {
+            type: 'html-button-response',
+            stimulus:
+            '<p><font size=5>' + tmpStr + '</font></p>',
+            choices: ['<font size=5>はい</font>'],
+        }
+        timeline.push(instruction);
+
+        // ブロック開始、刺激の配列の設定
+        for (var r = 0; r < rep; r++){
+          var order = []; // 練習試行と本試行の刺激の配列
+          for (var a = 0; a<3; a++){
+            if (a == 2){
+              var c = 4;
+            } else {
+              var c = 10;
+            }
+            for (var b = 0; b<c; b++){
+              order.push([a, b]);
+            }
+          }
+/*
+        for (var r = 0; r < rep; r++){
+         if (phase == 0) { // 練習試行
+           var order = [1:24]; // 練習試行の刺激の配列
+         } else { // 本試行;
+           var order = []; // 本試行の刺激の配列、defaultはa<7, b<4
+           for (var c = 0; c<2; c++){
+            for (var a = 0; a<7; a++){
+             for (var b = 1; b<4; b++){
+               order.push([a, b]);
+             }
+           }
+         }
+       }
+*/
+
+         // 刺激の配列をランダムに
+         var shuffled_order = jsPsych.randomization.shuffle(order);
+
+         console.log(order); //刺激確認用
+         console.log(shuffled_order); //刺激確認用
+
+         // ブロック間の休憩画面
+         if (r > 0) {　
+           var rest = {
+               type: 'html-button-response',
+               stimulus:
+               '<p><font size=5>休憩画面です。</font></p>'+
+               '<p><font size=5>続ける場合は以下のボタンを押してください。</font></p>',
+               choices: ['<font size=5>続ける</font>'],
+           }
+           timeline.push(rest);
+         }
+
+         // 音声ファイルの選択と経路
+         for (var i = 0; i < shuffled_order.length; i++){
+
+            // i=1からではなく、i=0から始めるのがポイントです。またorder.lengthを使うと、orderの内容が増えても、わざわざ変更しなくてよくなります。
+
+            var x = shuffled_order[i][0];
+            var y = shuffled_order[i][1];
+
+
+            // 音声ファイルを指定
+            soundFile = "sound/shinrijikken/" + String(x) + String(y) + ".wav";
+
+            // 課題の画面
+            var trials = {
+            type: 'survey-likert',
+            button_label: ['次へ'],
+            post_trial_gap: 100,
+            questions:
+            [{prompt:
+            '<p><font size=5>次の音声の発音を表す文字をお選びください。</font></p>'+
+            '<font size=5><span style="padding: 7px; line-height: 500%;"> </span></font>'+
+            '<font size=5><a onClick="sound_play()"><span id="playLabel" style="border: 3px double; padding: 7px; line-height: 500%;">再生</span></a></font>'+
+            '<font size=5><span style="padding: 7px; line-height: 500%;"> </span></font>'+
+            '<audio id="audio-center" preload="auto"><source src="' + soundFile + '" type="audio/wav"></audio>',
+            labels: scale,
+            required:true}],
+            data: { // 実験条件は data オブジェクトで指定することが可能です。詳しくは https://www.jspsych.org/overview/trial/ の "The data parameter" にあります。
+                stimuli_info: String(x) + String(y),
+                counterBalance_info: cb_info,
+                phase_info: phase,
+            },
+            }
+            console.log(soundFile); //刺激確認用
+            timeline.push(trials);
+          }
+        }
+      }
+
+
+// 終了画面
+　var end = {
+    type: 'html-button-response',
+    stimulus:
+    '<p><font size=5>実験はこれで終わりです。</font></p>'+
+    '<p><font size=5>以下の終了ボタンを押してください。</font></p>',
+    choices: ['<font size=5>終了</font>'],
+  }
+　timeline.push(end);
+
+
+  jsPsych.init({
+    timeline: timeline,
+    on_finish: function() {
+      jsPsych.data.get().localSave('csv','ident_j_subject.csv');
+    },
+  });
+
+
+</script>
+</html>
