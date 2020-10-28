@@ -2,11 +2,12 @@
 
 <html>
 <head>
-  <script src="../jspsych.js"></script>
-  <script src="../plugins/jspsych-html-button-response.js"></script>
-  <script src="../plugins/jspsych-html-keyboard-response.js"></script>
-  <script src="../plugins/jspsych-survey-likert.js"></script>
-  <link rel="stylesheet" href="../css/jspsych.css"></link>
+  <meta http-equiv="Content-Type"  content="text/html; charset=UTF-8">
+  <script src="../jsPsych20201027/jspsych.js"></script>
+  <script src="../jsPsych20201027/plugins/jspsych-html-button-response.js"></script>
+  <script src="../jsPsych20201027/plugins/jspsych-html-keyboard-response.js"></script>
+  <script src="../jsPsych20201027/plugins/jspsych-survey-likert.js"></script>
+  <link rel="stylesheet" href="../jsPsych20201027/css/jspsych.css"></link>
   <style>
     #jspsych-survey-likert-next{
       font-size: 20px;
@@ -15,6 +16,8 @@
 </head>
 <body></body>
 <script>
+  // もともとのプログラムでは変数を宣言するときに var が使われていますが、最近のJavaScriptでは、constとletを使うことが推奨されています。
+  // https://techacademy.jp/magazine/14872 の説明が分かりやすいかな
 
   var timeline = [];
 
@@ -30,14 +33,20 @@
 
 
 // 選択肢の設定
-  var counterBalance = 1;
+  // このようにするとURLから変数の情報を受け取ることができます。詳しくは、https://www.jspsych.org/core_library/jspsych-data/#jspsychdatageturlvariable
+  let counterBalance = jsPsych.data.getURLVariable('counterBalance');
+  if (typeof counterBalance === "undefined") {
+      counterBalance = 1 
+  } else {
+      counterBalance = Number(counterBalance);
+  }
 
   if (counterBalance == 1) {
     scale = ["<p></p><font size=6>ば</font>", "<p></p><font size=6>ぱ</font>"];
-    cb_info = ["0=ba, 1=pa"];
+    // cb_info = ["0=ba, 1=pa"];
   } else {
     scale = ["<p></p><font size=6>ぱ</font>", "<p></p><font size=6>ば</font>"];
-    cb_info = ["0=pa, 1=ba"];
+    // cb_info = ["0=pa, 1=ba"];
   }
 
 // 音声再生に関する関数
@@ -45,7 +54,18 @@
       document.getElementById('audio-center').play();
       buttonSpan = document.getElementById('playLabel');
       buttonSpan.style.display = "none";
+      const element = document.getElementById('jspsych-survey-likert-next');
+      element.style.visibility  = "visible";
   }
+
+const nStimuli = 24; // 刺激の数
+// const nStimuli = 2; // 刺激の数
+
+const sounds = [];
+for (let i = 0; i < nStimuli; i++){
+  sounds.push(`stimuli/${i}.wav`) // この書き方はテンプレートリテラルと呼ばれています。慣れるととても便利ですよ。https://qiita.com/kura07/items/c9fa858870ad56dfec12
+} 
+// console.log(sounds)
 
 // 練習試行と本試行の分岐、ブロック数(繰り返し)の設定
     for (var phase = 0; phase < 2; phase++){ // phase=0は練習試行、phase=1は本試行
@@ -68,41 +88,15 @@
 
         // ブロック開始、刺激の配列の設定
         for (var r = 0; r < rep; r++){
-          var order = []; // 練習試行と本試行の刺激の配列
-          for (var a = 0; a<3; a++){
-            if (a == 2){
-              var c = 4;
-            } else {
-              var c = 10;
-            }
-            for (var b = 0; b<c; b++){
-              order.push([a, b]);
-            }
-          }
-/*
-        for (var r = 0; r < rep; r++){
-         if (phase == 0) { // 練習試行
-           var order = [1:24]; // 練習試行の刺激の配列
-         } else { // 本試行;
-           var order = []; // 本試行の刺激の配列、defaultはa<7, b<4
-           for (var c = 0; c<2; c++){
-            for (var a = 0; a<7; a++){
-             for (var b = 1; b<4; b++){
-               order.push([a, b]);
-             }
-           }
-         }
-       }
-*/
 
          // 刺激の配列をランダムに
-         var shuffled_order = jsPsych.randomization.shuffle(order);
+         var shuffled_order = jsPsych.randomization.shuffle(sounds);
 
-         console.log(order); //刺激確認用
          console.log(shuffled_order); //刺激確認用
 
+         
          // ブロック間の休憩画面
-         if (r > 0) {　
+         if (r > 0) {
            var rest = {
                type: 'html-button-response',
                stimulus:
@@ -118,32 +112,61 @@
 
             // i=1からではなく、i=0から始めるのがポイントです。またorder.lengthを使うと、orderの内容が増えても、わざわざ変更しなくてよくなります。
 
-            var x = shuffled_order[i][0];
-            var y = shuffled_order[i][1];
-
-
             // 音声ファイルを指定
-            soundFile = "sound/shinrijikken/" + String(x) + String(y) + ".wav";
+            const soundFile = shuffled_order[i]
+
+            // ファイル名から数値を取得
+            const file_info = soundFile.split('/')
+            const file_name = file_info[file_info.length - 1]
+            const stim_number = file_name.split('.')[0]
 
             // 課題の画面
             var trials = {
-            type: 'survey-likert',
-            button_label: ['次へ'],
-            post_trial_gap: 100,
-            questions:
-            [{prompt:
-            '<p><font size=5>次の音声の発音を表す文字をお選びください。</font></p>'+
-            '<font size=5><span style="padding: 7px; line-height: 500%;"> </span></font>'+
-            '<font size=5><a onClick="sound_play()"><span id="playLabel" style="border: 3px double; padding: 7px; line-height: 500%;">再生</span></a></font>'+
-            '<font size=5><span style="padding: 7px; line-height: 500%;"> </span></font>'+
-            '<audio id="audio-center" preload="auto"><source src="' + soundFile + '" type="audio/wav"></audio>',
-            labels: scale,
-            required:true}],
-            data: { // 実験条件は data オブジェクトで指定することが可能です。詳しくは https://www.jspsych.org/overview/trial/ の "The data parameter" にあります。
-                stimuli_info: String(x) + String(y),
-                counterBalance_info: cb_info,
-                phase_info: phase,
-            },
+              type: 'survey-likert',
+              button_label: ['次へ'],
+              post_trial_gap: 100,
+              questions:
+                [{prompt:
+                '<p><font size=5>次の音声の発音を表す文字をお選びください。</font></p>'+
+                '<font size=5><span style="padding: 7px; line-height: 500%;"> </span></font>'+
+                '<font size=5><a onClick="sound_play()"><span id="playLabel" style="border: 3px double; padding: 7px; line-height: 500%;">再生</span></a></font>'+
+                '<font size=5><span style="padding: 7px; line-height: 500%;"> </span></font>'+
+                '<audio id="audio-center" preload="auto"><source src="' + soundFile + '" type="audio/wav"></audio>',
+                labels: scale,
+                required:true}],
+              data: { // 実験条件は data オブジェクトで指定することが可能です。詳しくは https://www.jspsych.org/overview/trial/ の "The data parameter" にあります。
+                  stimuli_info: stim_number,
+                  counterBalance_info: counterBalance,
+                  phase_info: phase,
+              },
+              on_load: function(){
+                const element = document.getElementById('jspsych-survey-likert-next');
+                element.style.visibility  = "hidden";
+              },
+              on_finish: function(data){
+                const arrayResponses = JSON.parse(data.responses); // responsesは文字列型で集計時に扱いにくいため、データを切り分けます。
+                jsPsych.data.addProperties(arrayResponses);
+
+                // console.log(arrayResponses)
+                // console.log(Object.keys(arrayResponses).length)
+
+                let resp;
+                if (counterBalance === 1) { // 左が「ば (ba)」　右が「ぱ (pa)」
+                  if (arrayResponses.Q0 === 0) {// 左を選択
+                    resp = 1; // ba
+                  } else {
+                    resp = 0; // pa
+                  }
+                } else { // 左が「ぱ (pa)」　右が「ば (ba)」
+                  if (arrayResponses.Q0 === 0) {// 左を選択
+                    resp = 0; // pa
+                  } else {
+                    resp = 1; // ba
+                  }
+                }
+
+                jsPsych.data.get().addToLast({resp: resp});
+              }
             }
             console.log(soundFile); //刺激確認用
             timeline.push(trials);
@@ -153,18 +176,21 @@
 
 
 // 終了画面
-　var end = {
+  var end = {
     type: 'html-button-response',
     stimulus:
     '<p><font size=5>実験はこれで終わりです。</font></p>'+
     '<p><font size=5>以下の終了ボタンを押してください。</font></p>',
     choices: ['<font size=5>終了</font>'],
   }
-　timeline.push(end);
+  timeline.push(end);
 
 
   jsPsych.init({
     timeline: timeline,
+    preload_audio: sounds, 
+    // 事前に読み込んでおいたほうがよさそうですが、サーバーにアップロードしていない状態では
+    // 動かなくなります。https://www.jspsych.org/overview/media-preloading/
     on_finish: function() {
       jsPsych.data.get().localSave('csv','ident_j_subject.csv');
     },
